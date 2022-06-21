@@ -1,8 +1,8 @@
 import json
-from flask import Flask, render_template,\
-    request, redirect, flash, url_for
 from datetime import datetime
 
+from flask import Flask, render_template, \
+    request, redirect, flash, url_for
 
 CLUB_PATH = "clubs.json"
 COMPETITION_PATH = "competitions.json"
@@ -29,8 +29,8 @@ def search_club(field, value):
         club = [club for club in clubs if club[field] == value][0]
     except IndexError or KeyError:
         return []
-
-    return club, clubs
+    else:
+        return club, clubs
 
 
 def search_competition(field, value):
@@ -43,8 +43,24 @@ def search_competition(field, value):
                        if competition[field] == value][0]
     except IndexError or KeyError:
         return []
+    else:
+        return competition, competitions
 
-    return competition, competitions
+
+def update_all_competitions_taken_place_field(competitions):
+    for competition in competitions:
+        if competition["taken_place"] is False:
+            if datetime.strptime(
+                    competition["date"], "%Y-%m-%d %H:%M:%S"
+            ) < datetime.now():
+                competition["taken_place"] = True
+                with open(
+                        COMPETITION_PATH, "w"
+                ) as to_be_updated_competitions:
+                    json.dump({"competitions": competitions},
+                              to_be_updated_competitions,
+                              indent=4)
+    return competitions
 
 
 """TODO: this shall go in init.py"""
@@ -57,35 +73,40 @@ def index():
     return render_template('index.html')
 
 
+@app.route("/backToSummary/<email>")
+def come_back_welcome_page(email):
+    """
+    Loads the available competitions in welcome.html and the data about the
+    club that was logged_in in booking.html.
+    """
+    competitions = load_competitions()
+    club, clubs = search_club("email", email)
+    return render_template('welcome.html',
+                           club=club,
+                           competitions=competitions)
+
+
 @app.route('/showSummary', methods=['POST'])
 def show_summary():
     """
-    loads the available competitions in welcome.html and the data about the
+    Loads the available competitions in welcome.html and the data about the
     club that just logged in in index.html. It handles the form in index.html.
     """
-    competitions = load_competitions()
     club, clubs = search_club("email", request.form['email'])
+    competitions = load_competitions()
     if club:
-        for competition in competitions:
-            if competition["taken_place"] is False:
-                if datetime.strptime(
-                        competition["date"], "%Y-%m-%d %H:%M:%S"
-                ) < datetime.now():
-                    competition["taken_place"] = True
-                    with open(
-                            COMPETITION_PATH, "w"
-                    ) as to_be_updated_competitions:
-                        json.dump({"competitions": competitions},
-                                  to_be_updated_competitions,
-                                  indent=4)
+        competitions = update_all_competitions_taken_place_field(competitions)
         return render_template('welcome.html',
                                club=club,
+                               clubs=clubs,
                                competitions=competitions)
+
     flash("we couldn't find your email in our database.")
     return render_template("index.html")
 
 
-@app.route('/book/<competition_to_be_booked_name>/<club_making_reservation_name>')
+@app.route(
+    '/book/<competition_to_be_booked_name>/<club_making_reservation_name>')
 def book(competition_to_be_booked_name, club_making_reservation_name):
     """
     Shows the user which competition he can book places to.
@@ -101,56 +122,64 @@ def book(competition_to_be_booked_name, club_making_reservation_name):
     In other words, the value passed to competition_to_be_booked isn't a dict
     but a str repr of a dict or a dict.
     """
-
-    competition, competitions = search_competition("name", competition_to_be_booked_name)
+    competition, competitions = search_competition(
+        "name",
+        competition_to_be_booked_name
+    )
     club, clubs = search_club("name", club_making_reservation_name)
     return render_template('booking.html',
                            club=club,
                            competition=competition)
 
 
-@app.route('/purchasePlaces', methods=['POST'])
-def purchase_places():
-    """Handles the form in booking.html."""
-    competition_to_be_booked_name = request.form['competition']
-    competition, competitions = search_competition("name", competition_to_be_booked_name)
-    club, clubs = search_club("name", request.form["club"])
-    places_required = int(request.form['places'])
-    club_number_of_points = int(club["points"])
-    to_be_reserved_total_places = club["reserved_places"][competition_to_be_booked_name] + places_required
-
+def more_than_12_reserved_places(club_reserved_places, required_places):
+    to_be_reserved_total_places = club_reserved_places + required_places
     if to_be_reserved_total_places > 12:
         flash("you required more than 12 places !")
-        return render_template("booking.html",
-                               club=club,
-                               competition=competition)
+        return "failed_check"
 
+
+def not_enough_points(places_required, club_number_of_points):
+    if places_required > club_number_of_points:
+        flash("you do not have enough points!")
+        return "failed_check"
+
+
+def no_more_available_places(places_required, places_available):
+    if places_available - places_required < 0:
+        flash("there are no more places available !")
+        return "failed_check"
+
+
+def competition_took_place(competition):
     if competition["taken_place"] is False:
         if datetime.strptime(
                 competition["date"], "%Y-%m-%d %H:%M:%S"
         ) < datetime.now():
             competition["taken_place"] = True
-            with open(
-                    COMPETITION_PATH, "w"
-            ) as to_be_updated_competitions:
-                json.dump({"competitions": competitions},
-                          to_be_updated_competitions,
-                          indent=4)
-            flash("the competition already took place !")
-            return render_template("booking.html",
-                                   club=club,
-                                   competition=competition)
+    if competition["taken_place"]:
+        flash("the competition already took place !")
+        return "failed_check"
 
-    if places_required > club_number_of_points:
-        flash("you required more places than you have available !")
+
+def run_checks(competition, club, places_required, club_number_of_points):
+    failed_checks = more_than_12_reserved_places(club["reserved_places"][competition["name"]], places_required) or not_enough_points(places_required, club_number_of_points) or no_more_available_places(places_required, competition["number_of_places"]) or competition_took_place(competition)
+    if failed_checks:
         return render_template("booking.html",
                                club=club,
                                competition=competition)
 
+
+def record_changes(competitions, competition, clubs, club, places_required,
+                   club_number_of_points):
+    competition_to_be_booked_name = competition["name"]
     competition['number_of_places'] = int(
-        competition['number_of_places']) - places_required
+        competition['number_of_places']
+    ) - places_required
     club["points"] = club_number_of_points - places_required
-    club["reserved_places"][competition_to_be_booked_name] = to_be_reserved_total_places
+    club["reserved_places"][
+        competition_to_be_booked_name] = club["reserved_places"][
+                                             competition_to_be_booked_name] + places_required
 
     with open(CLUB_PATH, "w") as to_be_updated_clubs:
         json.dump({"clubs": clubs},
@@ -162,6 +191,32 @@ def purchase_places():
                   to_be_updated_competitions,
                   indent=4)
 
+    return competitions, club
+
+
+@app.route('/purchasePlaces', methods=['POST'])
+def purchase_places():
+    """Handles the form in booking.html."""
+
+    competition_to_be_booked_name = request.form['competition']
+    competition, competitions = search_competition(
+        "name",
+        competition_to_be_booked_name
+    )
+    club, clubs = search_club("name", request.form["club"])
+    places_required = int(request.form['places'])
+    club_number_of_points = int(club["points"])
+
+    failed_checks = run_checks(competition, club, places_required,
+                               club_number_of_points)
+    if failed_checks:
+        return failed_checks
+
+    competitions, club = record_changes(
+        competitions, competition,
+        clubs, club,
+        places_required, club_number_of_points
+    )
     flash('Great-booking complete!')
     return render_template('welcome.html',
                            club=club,
@@ -169,6 +224,11 @@ def purchase_places():
 
 
 # TODO: Add route for points display
+@app.route("/points")
+def points():
+    clubs_to_display = load_clubs()
+    return render_template("points.html",
+                           clubs=clubs_to_display)
 
 
 @app.route('/logout')

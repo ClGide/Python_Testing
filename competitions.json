@@ -3,13 +3,13 @@
         {
             "name": "Spring Festival",
             "date": "2023-03-27 10:00:00",
-            "number_of_places": 21,
+            "number_of_places": 18,
             "taken_place": false
         },
         {
             "name": "Fall Classic",
-            "date": "2022-06-20 22:20:00",
-            "number_of_places": 8,
+            "date": "2022-06-21 17:15:00",
+            "number_of_places": 6,
             "taken_place": true
         }
     ]

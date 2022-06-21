@@ -18,6 +18,13 @@
     {% endif %}
     {%endwith %}
 
+    <h3>Clubs' current point balance </h3>
+    <ul>
+   {% for club in clubs %}
+        <li>{{ club["name"] }}: {{ club["points"] }}</li>
+    {% endfor %}
+   </ul>
+
     <h3>Points available: {{ club["points"] }}</h3>
     <h3>Competitions:</h3>
     <ul>

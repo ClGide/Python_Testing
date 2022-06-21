@@ -1,0 +1,15 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Club's supply of points || GUDLFT</title>
+</head>
+<body>
+        <h3>Clubs' current point balance </h3>
+        <ul>
+       {% for club in clubs %}
+            <li>{{ club["name"] }}: {{ club["points"] }}</li>
+        {% endfor %}
+       </ul>
+</body>
+</html>
