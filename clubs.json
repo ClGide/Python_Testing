@@ -1,16 +1,31 @@
-{"clubs":[
-    {
-        "name":"Simply Lift",
-        "email":"john@simplylift.co",
-        "points":"13"
-    },
-    {
-        "name":"Iron Temple",
-        "email": "admin@irontemple.com",
-        "points":"4"
-    },
-    {   "name":"She Lifts",
-        "email": "kate@shelifts.co.uk",
-        "points":"12"
-    }
-]}
+{
+    "clubs": [
+        {
+            "name": "Simply Lift",
+            "email": "john@simplylift.co",
+            "points": 1,
+            "reserved_places": {
+                "Spring Festival": 4,
+                "Fall Classic": 0
+            }
+        },
+        {
+            "name": "Iron Temple",
+            "email": "admin@irontemple.com",
+            "points": 25,
+            "reserved_places": {
+                "Spring Festival": 0,
+                "Fall Classic": 0
+            }
+        },
+        {
+            "name": "She Lifts",
+            "email": "kate@shelifts.co.uk",
+            "points": "12",
+            "reserved_places": {
+                "Spring Festival": 0,
+                "Fall Classic": 0
+            }
+        }
+    ]
+}
