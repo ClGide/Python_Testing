@@ -1,12 +1,11 @@
-
 {
     "clubs": [
         {
             "name": "Simply Lift",
             "email": "john@simplylift.co",
-            "points": 1,
+            "points": 7,
             "reserved_places": {
-                "Spring Festival": 4,
+                "Spring Festival": 1,
                 "Fall Classic": 0
             }
         },

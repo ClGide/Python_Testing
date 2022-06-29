@@ -1,5 +1,13 @@
+"""Whenever we refer to clubs or competitions, we refer to dictionary
+holding (possibly modified by user interaction) data about the clubs
+or competitions from the JSON files. The keys of those dictionary are
+always strings while the values can be strings, integers, booleans and
+even dictionaries.
+"""
+
 import json
 from datetime import datetime
+from typing import Union
 
 from flask import Flask, render_template, \
     request, redirect, flash, url_for
@@ -8,19 +16,28 @@ CLUB_PATH = "clubs.json"
 COMPETITION_PATH = "competitions.json"
 
 
-def load_clubs():
+def load_clubs() -> list[dict[str, any]]:
+    """Loads the JSON file containing data about the clubs and
+    returns it in a list."""
     with open(CLUB_PATH) as clubs:
         list_of_clubs = json.load(clubs)['clubs']
         return list_of_clubs
 
 
-def load_competitions():
+def load_competitions() -> list[dict[str, any]]:
+    """Loads the JSON file containing data about the competitions and
+    returns it in a list."""
     with open(COMPETITION_PATH) as competitions:
         list_of_competitions = json.load(competitions)['competitions']
         return list_of_competitions
 
 
-def search_club(field, value):
+def search_club(field: str, value: any) -> Union[list, tuple[
+    dict[str, any], list[dict[str, any]]]]:
+
+    """Loads the JSON file containing data about the clubs and
+    returns data about the club having the corresponding field and
+    value. For convenience, also returns the list of clubs."""
     if field not in ["name", "email", "points", "reserved_places"]:
         raise ValueError("the value for the field arg isn't a valid one")
 
@@ -33,7 +50,12 @@ def search_club(field, value):
         return club, clubs
 
 
-def search_competition(field, value):
+def search_competition(field: str, value: any) -> Union[list, tuple[
+    dict[str, any], list[dict[str, any]]]]:
+
+    """Loads the JSON file containing data about the competitions and only
+    returns data about the competition having the corresponding field and
+    value. For convenience, also returns the list of clubs."""
     if field not in ["name", "date", "number_of_places", "taken_place"]:
         raise ValueError("the value for the field arg isn't a valid one")
 
@@ -48,6 +70,11 @@ def search_competition(field, value):
 
 
 def update_all_competitions_taken_place_field(competitions):
+    """Receives a list of competitions. Loops through each
+    competition. If the taken_place field is set to False,
+    compares the date field with datetime.now(). Sets the taken_place
+    field to True if the date field is behind. Writes the list of
+    competition to the JSON file and returns the list.  """
     for competition in competitions:
         if competition["taken_place"] is False:
             if datetime.strptime(
@@ -56,9 +83,9 @@ def update_all_competitions_taken_place_field(competitions):
                 competition["taken_place"] = True
                 with open(
                         COMPETITION_PATH, "w"
-                ) as to_be_updated_competitions:
+                ) as file_to_write_competitions:
                     json.dump({"competitions": competitions},
-                              to_be_updated_competitions,
+                              file_to_write_competitions,
                               indent=4)
     return competitions
 
@@ -132,15 +159,40 @@ def book(competition_to_be_booked_name, club_making_reservation_name):
                            competition=competition)
 
 
-def more_than_12_reserved_places(club_reserved_places, required_places):
+def more_than_12_reserved_places(club_reserved_places: int, required_places: int):
+    """ Flashes a message if the club did reserve more than 12 places.
+
+
+    Args:
+        club_reserved_places: the number of places the club already reserved at
+            the tournament before this operation.
+        required_places: the number of places the club wants to reserve at the
+            tournament within this operation.
+
+    Returns: A string used in run_checks() if the club tries to reserve more
+        than 12 places.
+    """
     to_be_reserved_total_places = club_reserved_places + required_places
     if to_be_reserved_total_places > 12:
         flash("you required more than 12 places !")
         return "failed_check"
 
 
-def not_enough_points(places_required, club_number_of_points):
-    if places_required > club_number_of_points:
+def not_enough_points(required_places: int, club_number_of_points: int):
+    """ Flashes the corresponding message if the club wants to purchase more
+    places than they have points.
+
+    Args:
+        required_places: the number of places the club wants to reserve at the
+            tournament within this operation
+        club_number_of_points: the number of points the club has before this
+            operation.
+
+    Returns: A string used in run_checks() if the club wants to purchase more
+    places than they have points.
+
+    """
+    if required_places > club_number_of_points:
         flash("you do not have enough points!")
         return "failed_check"
 
@@ -163,7 +215,9 @@ def competition_took_place(competition):
 
 
 def run_checks(competition, club, places_required, club_number_of_points):
-    failed_checks = more_than_12_reserved_places(club["reserved_places"][competition["name"]], places_required) or not_enough_points(places_required, club_number_of_points) or no_more_available_places(places_required, competition["number_of_places"]) or competition_took_place(competition)
+    failed_checks = more_than_12_reserved_places(club["reserved_places"][competition["name"]], places_required) or not_enough_points(
+        places_required,
+        club_number_of_points) or no_more_available_places(places_required, competition["number_of_places"]) or competition_took_place(competition)
     if failed_checks:
         return render_template("booking.html",
                                club=club,
@@ -220,6 +274,7 @@ def purchase_places():
     flash('Great-booking complete!')
     return render_template('welcome.html',
                            club=club,
+                           clubs=clubs,
                            competitions=competitions)
 
 
