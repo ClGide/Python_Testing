@@ -1,0 +1,45 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Summary | GUDLFT Registration</title>
+</head>
+<body>
+        <h2>Welcome, {{ club["email"] }} </h2>
+        <a href="{{ url_for('gudlft.logout') }}">Logout</a>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul>
+       {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+       </ul>
+    {% endif %}
+    {%endwith %}
+
+    <h3>Clubs' current point balance </h3>
+    <ul>
+   {% for club in clubs %}
+        <li>{{ club["name"] }}: {{ club["points"] }}</li>
+    {% endfor %}
+   </ul>
+
+    <h3>Points available: {{ club["points"] }}</h3>
+    <h3>Competitions:</h3>
+    <ul>
+        {% for comp in competitions %}
+        <li>
+            {{ comp["name"] }}<br>
+            Date: {{ comp["date"] }}<br>
+            Number of places: {{ comp["number_of_places"] }}
+            {% if comp["number_of_places"]|int > 0 %}
+            {% if comp["taken_place"] == false %}<br>
+            <a href="{{ url_for('gudlft.book', competition_to_be_booked_name=comp['name'], club_making_reservation_name=club['name']) }}">Book Places</a>
+            {% endif %}
+            {% endif %}
+        </li><br>
+        {% endfor %}
+    </ul>
+</body>
+</html>
