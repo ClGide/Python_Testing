@@ -160,11 +160,12 @@ def competition_took_place(competition: dict[str, any]) -> Union[str, None]:
     Returns: A string used in run_checks() if the club wants to purchase
         places although the competition already took place.
     """
-    if competition["taken_place"] is False:
-        if datetime.strptime(
-                competition["date"], "%Y-%m-%d %H:%M:%S"
-        ) < datetime.now():
-            competition["taken_place"] = True
+    if datetime.strptime(
+            competition["date"], "%Y-%m-%d %H:%M:%S"
+    ) <= datetime.now():
+        competition["taken_place"] = True
+    else:
+        competition["taken_place"] = False
     if competition["taken_place"]:
         flash("the competition already took place !")
         return "failed_check"
@@ -235,13 +236,12 @@ def record_changes(competitions: list[dict[str, any]],
     Returns: All the competitions and the club that successfully purchased
         the places. Those dictionaries are used by the render_template call
         returned by server.purchase_places.
-
     """
-
     competition_to_be_booked_name = competition["name"]
     competition['number_of_places'] = int(
         competition['number_of_places']
     ) - required_places
+
     club["points"] = club_number_of_points - required_places
 
     reserved_places = club["reserved_places"][competition_to_be_booked_name]
